@@ -4,7 +4,10 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
 	"strings"
+	"student-api/internal/config"
+	"student-api/internal/storage/postgres"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -67,12 +70,22 @@ type LoginRequest struct {
 }
 
 func main() {
+	// Загрузка конфига
+	cfg := config.MustLoad()
+
+	// Подключение БД
+	storage, err := postgres.New(cfg.Storage)
+	if err != nil {
+		log.Fatal("Failed to init storage")
+		os.Exit(1)
+	}
+
+	_ = storage
+
 	r := chi.NewRouter()
 
 	r.Post("/api/v1/auth/login", loginHandler)
 	r.Post("/api/v1/auth/logout", logoutHandler)
-
-	// storage.Init()
 
 	log.Println("Server started on :8080!")
 	log.Fatal(http.ListenAndServe(":8080", r))
