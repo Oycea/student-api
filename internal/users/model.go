@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"student-api/internal/storage/postgres"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 type User struct {
@@ -21,6 +23,11 @@ type User struct {
 // -------------------- CREATE --------------------
 
 func CreateUser(storage *postgres.Storage, u *User) error {
+	hashed, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
 	query := `
 		INSERT INTO users (username, password_hash, full_name, role_id, email, created_at)
 		VALUES ($1,$2,$3,$4,$5,NOW())
@@ -29,7 +36,7 @@ func CreateUser(storage *postgres.Storage, u *User) error {
 	return storage.DB().QueryRow(
 		query,
 		u.Username,
-		u.Password, // пока без хэширования
+		string(hashed),
 		u.FullName,
 		u.RoleID,
 		u.Email,
@@ -64,6 +71,40 @@ func GetUserByID(storage *postgres.Storage, id int64) (*User, error) {
 	}
 
 	return &u, nil
+}
+
+func GetUserByUsername(storage *postgres.Storage, username string) (*User, string, string, error) {
+	var u User
+	var passwordHash string
+	var roleName string
+
+	query := `
+		SELECT u.id, u.username, u.full_name, u.role_id,
+		       u.email, u.created_at, u.password_hash, r.name
+		FROM users u
+		JOIN roles r ON r.id = u.role_id
+		WHERE u.username = $1
+	`
+
+	err := storage.DB().QueryRow(query, username).Scan(
+		&u.ID,
+		&u.Username,
+		&u.FullName,
+		&u.RoleID,
+		&u.Email,
+		&u.CreatedAt,
+		&passwordHash,
+		&roleName,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, "", "", errors.New("invalid credentials")
+		}
+		return nil, "", "", err
+	}
+
+	return &u, roleName, passwordHash, nil
 }
 
 // -------------------- READ ALL --------------------

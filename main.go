@@ -28,21 +28,27 @@ func main() {
 
 	r := chi.NewRouter()
 
-	r.Post("/api/v1/auth/login", auth.LoginHandler)
+	// ---------------- AUTH ----------------
+	r.Post("/api/v1/auth/login", auth.LoginHandler(storage))
 	r.Post("/api/v1/auth/logout", auth.LogoutHandler)
 
+	// ---------------- STUDENTS ----------------
 	studentHandler := students.NewHandler(storage)
 	r.Route("/api/v1/students", func(r chi.Router) {
 		r.Use(auth.JWTMiddleware)
 		studentHandler.RegisterRoutes(r)
 	})
 
+	// ---------------- USERS ----------------
 	userHandler := users.NewHandler(storage)
 	r.Route("/api/v1/users", func(r chi.Router) {
 		r.Use(auth.JWTMiddleware)
+		// Для админских эндпоинтов можно добавить проверку роли
+		r.Use(auth.RequireRole("admin"))
 		userHandler.RegisterRoutes(r)
 	})
 
+	// ---------------- FACULTIES / DEPARTMENTS ----------------
 	facultieHandler := faculties.NewHandler(storage)
 	r.Route("/api/v1/faculties", func(r chi.Router) {
 		r.Use(auth.JWTMiddleware)
