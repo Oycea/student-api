@@ -1,6 +1,7 @@
 package users
 
 import (
+	"database/sql"
 	"errors"
 	"time"
 
@@ -33,6 +34,36 @@ func CreateUser(u *User) error {
 		u.RoleID,
 		u.Email,
 	).Scan(&u.ID, &u.CreatedAt)
+}
+
+// -------------------- READ ONE --------------------
+
+func GetUserByID(id int64) (*User, error) {
+	var u User
+
+	query := `
+		SELECT id, username, full_name, role_id, email, created_at
+		FROM users
+		WHERE id=$1
+	`
+
+	err := storage.DB.QueryRow(query, id).Scan(
+		&u.ID,
+		&u.Username,
+		&u.FullName,
+		&u.RoleID,
+		&u.Email,
+		&u.CreatedAt,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, errors.New("user not found")
+		}
+		return nil, err
+	}
+
+	return &u, nil
 }
 
 // -------------------- READ ALL --------------------

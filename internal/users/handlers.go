@@ -10,6 +10,7 @@ import (
 
 func RegisterRoutes(r chi.Router) {
 	r.Get("/", ListUsersCRUD)
+	r.Get("/{id}", GetUserCRUD)
 	r.Post("/", CreateUserCRUD)
 	r.Put("/{id}", UpdateUserCRUD)
 	r.Delete("/{id}", DeleteUserCRUD)
@@ -24,6 +25,24 @@ func ListUsersCRUD(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	json.NewEncoder(w).Encode(users)
+}
+
+// -------------------- GET ONE --------------------
+
+func GetUserCRUD(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+
+	user, err := GetUserByID(id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	json.NewEncoder(w).Encode(user)
 }
 
 // -------------------- POST --------------------
