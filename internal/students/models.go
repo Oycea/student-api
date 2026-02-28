@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"student-api/internal/storage"
+	"student-api/internal/storage/postgres"
 )
 
 type Student struct {
@@ -27,9 +27,9 @@ type Student struct {
 }
 
 // Проверка уникальности student_ticket
-func IsTicketUnique(ticket string) (bool, error) {
+func IsTicketUnique(storage *postgres.Storage, ticket string) (bool, error) {
 	var exists bool
-	err := storage.DB.QueryRow("SELECT EXISTS(SELECT 1 FROM students WHERE student_ticket=$1)", ticket).Scan(&exists)
+	err := storage.DB().QueryRow("SELECT EXISTS(SELECT 1 FROM students WHERE student_ticket=$1)", ticket).Scan(&exists)
 	if err != nil {
 		return false, err
 	}
@@ -37,14 +37,14 @@ func IsTicketUnique(ticket string) (bool, error) {
 }
 
 // Создание студента
-func CreateStudent(s *Student) error {
+func CreateStudent(storage *postgres.Storage, s *Student) error {
 	query := `
 		INSERT INTO students 
 		(student_ticket, first_name, last_name, middle_name, department_id, admission_year, degree, thesis_title, graduation_year, graduated, grade, archived, created_at, updated_at)
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,NOW(),NOW())
 		RETURNING id, created_at, updated_at
 	`
-	return storage.DB.QueryRow(query,
+	return storage.DB().QueryRow(query,
 		s.StudentTicket,
 		s.FirstName,
 		s.LastName,
@@ -61,11 +61,11 @@ func CreateStudent(s *Student) error {
 }
 
 // Получение студента по ID
-func GetStudentByID(id int64) (*Student, error) {
+func GetStudentByID(storage *postgres.Storage, id int64) (*Student, error) {
 	s := &Student{}
 	query := `SELECT id, student_ticket, first_name, last_name, middle_name, department_id, admission_year, degree, thesis_title, graduation_year, graduated, grade, archived, created_at, updated_at
 			  FROM students WHERE id=$1`
-	err := storage.DB.QueryRow(query, id).Scan(
+	err := storage.DB().QueryRow(query, id).Scan(
 		&s.ID,
 		&s.StudentTicket,
 		&s.FirstName,
@@ -89,12 +89,12 @@ func GetStudentByID(id int64) (*Student, error) {
 }
 
 // Обновление студента
-func UpdateStudent(s *Student) error {
+func UpdateStudent(storage *postgres.Storage, s *Student) error {
 	query := `
 		UPDATE students SET first_name=$1, last_name=$2, middle_name=$3, department_id=$4, admission_year=$5, degree=$6, thesis_title=$7, graduation_year=$8, graduated=$9, grade=$10, updated_at=NOW()
 		WHERE id=$11 AND archived=false
 	`
-	res, err := storage.DB.Exec(query,
+	res, err := storage.DB().Exec(query,
 		s.FirstName,
 		s.LastName,
 		s.MiddleName,
@@ -118,8 +118,8 @@ func UpdateStudent(s *Student) error {
 }
 
 // Архивация студента
-func ArchiveStudent(id int64) error {
-	res, err := storage.DB.Exec("UPDATE students SET archived=true, updated_at=NOW() WHERE id=$1", id)
+func ArchiveStudent(storage *postgres.Storage, id int64) error {
+	res, err := storage.DB().Exec("UPDATE students SET archived=true, updated_at=NOW() WHERE id=$1", id)
 	if err != nil {
 		return err
 	}
@@ -131,6 +131,6 @@ func ArchiveStudent(id int64) error {
 }
 
 // Удаление студента (soft delete)
-func DeleteStudent(id int64) error {
-	return ArchiveStudent(id)
+func DeleteStudent(storage *postgres.Storage, id int64) error {
+	return ArchiveStudent(storage, id)
 }

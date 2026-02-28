@@ -13,6 +13,10 @@ type Storage struct {
 	db *sql.DB
 }
 
+func (s *Storage) DB() *sql.DB {
+	return s.db
+}
+
 func New(connectStr string) (*Storage, error) {
 	const op = "storage.postgres.new"
 

@@ -4,22 +4,31 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"student-api/internal/storage/postgres"
 
 	"github.com/go-chi/chi/v5"
 )
 
-func RegisterRoutes(r chi.Router) {
-	r.Get("/", ListFacultiesCRUD)
-	r.Get("/{id}", GetFacultyCRUD)
-	r.Post("/", CreateFacultyCRUD)
-	r.Put("/{id}", UpdateFacultyCRUD)
-	r.Delete("/{id}", DeleteFacultyCRUD)
+type Handler struct {
+	storage *postgres.Storage
+}
+
+func NewHandler(storage *postgres.Storage) *Handler {
+	return &Handler{storage: storage}
+}
+
+func (h *Handler) RegisterRoutes(r chi.Router) {
+	r.Get("/", h.ListFacultiesCRUD)
+	r.Get("/{id}", h.GetFacultyCRUD)
+	r.Post("/", h.CreateFacultyCRUD)
+	r.Put("/{id}", h.UpdateFacultyCRUD)
+	r.Delete("/{id}", h.DeleteFacultyCRUD)
 }
 
 // -------------------- GET --------------------
 
-func ListFacultiesCRUD(w http.ResponseWriter, r *http.Request) {
-	faculties, err := GetAllFaculties()
+func (h *Handler) ListFacultiesCRUD(w http.ResponseWriter, r *http.Request) {
+	faculties, err := GetAllFaculties(h.storage)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -30,14 +39,14 @@ func ListFacultiesCRUD(w http.ResponseWriter, r *http.Request) {
 
 // -------------------- GET ONE --------------------
 
-func GetFacultyCRUD(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetFacultyCRUD(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
 	if err != nil {
 		http.Error(w, "invalid id", http.StatusBadRequest)
 		return
 	}
 
-	faculty, err := GetFacultyByID(id)
+	faculty, err := GetFacultyByID(h.storage, id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
@@ -48,7 +57,7 @@ func GetFacultyCRUD(w http.ResponseWriter, r *http.Request) {
 
 // -------------------- POST --------------------
 
-func CreateFacultyCRUD(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) CreateFacultyCRUD(w http.ResponseWriter, r *http.Request) {
 	var f Faculty
 
 	if err := json.NewDecoder(r.Body).Decode(&f); err != nil {
@@ -61,7 +70,7 @@ func CreateFacultyCRUD(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := CreateFaculty(&f); err != nil {
+	if err := CreateFaculty(h.storage, &f); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -72,7 +81,7 @@ func CreateFacultyCRUD(w http.ResponseWriter, r *http.Request) {
 
 // -------------------- PUT --------------------
 
-func UpdateFacultyCRUD(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) UpdateFacultyCRUD(w http.ResponseWriter, r *http.Request) {
 	id, _ := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
 
 	var f Faculty
@@ -83,7 +92,7 @@ func UpdateFacultyCRUD(w http.ResponseWriter, r *http.Request) {
 
 	f.ID = id
 
-	if err := UpdateFaculty(&f); err != nil {
+	if err := UpdateFaculty(h.storage, &f); err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
@@ -93,10 +102,10 @@ func UpdateFacultyCRUD(w http.ResponseWriter, r *http.Request) {
 
 // -------------------- DELETE --------------------
 
-func DeleteFacultyCRUD(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) DeleteFacultyCRUD(w http.ResponseWriter, r *http.Request) {
 	id, _ := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
 
-	if err := DeleteFaculty(id); err != nil {
+	if err := DeleteFaculty(h.storage, id); err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
