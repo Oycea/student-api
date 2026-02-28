@@ -1,0 +1,6 @@
+env: "local"
+connect_db: "host=localhost port=5432 user=postgres password=Mishanya228+ dbname=studentdb sslmode=disable"
+http_server:
+  adress: "localhost:8080"
+  timeout: 4s
+  idle_timeout: 60s
