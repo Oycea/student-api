@@ -1,77 +1,19 @@
 package main
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
 	"os"
-	"strings"
+
+	"student-api/internal/auth"
 	"student-api/internal/config"
 	faculties "student-api/internal/departments"
 	"student-api/internal/storage/postgres"
-	"student-api/internal/users"
-	"time"
-
 	"student-api/internal/students"
+	"student-api/internal/users"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/golang-jwt/jwt/v5"
 )
-
-var secret = []byte("secret_key")
-
-func loginHandler(w http.ResponseWriter, r *http.Request) {
-	var req LoginRequest
-	json.NewDecoder(r.Body).Decode(&req)
-
-	if req.Username != "admin" || req.Password != "admin" {
-		http.Error(w, "invalid credentials", http.StatusUnauthorized)
-		return
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"username": req.Username,
-		"exp":      time.Now().Add(24 * time.Hour).Unix(),
-	})
-
-	tokenString, _ := token.SignedString(secret)
-
-	json.NewEncoder(w).Encode(map[string]string{
-		"token": tokenString,
-	})
-}
-
-func jwtMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		authHeader := r.Header.Get("Authorization")
-		if authHeader == "" {
-			http.Error(w, "missing token", http.StatusUnauthorized)
-			return
-		}
-
-		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-
-		_, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-			return secret, nil
-		})
-
-		if err != nil {
-			http.Error(w, "invalid token", http.StatusUnauthorized)
-			return
-		}
-
-		next.ServeHTTP(w, r)
-	})
-}
-
-func logoutHandler(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-}
-
-type LoginRequest struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-}
 
 func main() {
 	// Загрузка конфига
@@ -86,24 +28,24 @@ func main() {
 
 	r := chi.NewRouter()
 
-	r.Post("/api/v1/auth/login", loginHandler)
-	r.Post("/api/v1/auth/logout", logoutHandler)
+	r.Post("/api/v1/auth/login", auth.LoginHandler)
+	r.Post("/api/v1/auth/logout", auth.LogoutHandler)
 
 	studentHandler := students.NewHandler(storage)
 	r.Route("/api/v1/students", func(r chi.Router) {
-		r.Use(jwtMiddleware)
+		r.Use(auth.JWTMiddleware)
 		studentHandler.RegisterRoutes(r)
 	})
 
 	userHandler := users.NewHandler(storage)
 	r.Route("/api/v1/users", func(r chi.Router) {
-		r.Use(jwtMiddleware)
+		r.Use(auth.JWTMiddleware)
 		userHandler.RegisterRoutes(r)
 	})
 
 	facultieHandler := faculties.NewHandler(storage)
 	r.Route("/api/v1/faculties", func(r chi.Router) {
-		r.Use(jwtMiddleware)
+		r.Use(auth.JWTMiddleware)
 		facultieHandler.RegisterRoutes(r)
 	})
 
