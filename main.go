@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	"student-api/internal/storage"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -17,7 +19,9 @@ func main() {
 
 	r.Post("/api/v1/auth/login", loginHandler)
 
-	log.Println("Server started on :8080")
+	storage.Init()
+
+	log.Println("Server started on :8080!")
 	log.Fatal(http.ListenAndServe(":8080", r))
 }
 
