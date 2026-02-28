@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"student-api/internal/storage"
+	"student-api/internal/storage/postgres"
 )
 
 type User struct {
@@ -20,13 +20,13 @@ type User struct {
 
 // -------------------- CREATE --------------------
 
-func CreateUser(u *User) error {
+func CreateUser(storage *postgres.Storage, u *User) error {
 	query := `
 		INSERT INTO users (username, password_hash, full_name, role_id, email, created_at)
 		VALUES ($1,$2,$3,$4,$5,NOW())
 		RETURNING id, created_at
 	`
-	return storage.DB.QueryRow(
+	return storage.DB().QueryRow(
 		query,
 		u.Username,
 		u.Password, // пока без хэширования
@@ -38,7 +38,7 @@ func CreateUser(u *User) error {
 
 // -------------------- READ ONE --------------------
 
-func GetUserByID(id int64) (*User, error) {
+func GetUserByID(storage *postgres.Storage, id int64) (*User, error) {
 	var u User
 
 	query := `
@@ -47,7 +47,7 @@ func GetUserByID(id int64) (*User, error) {
 		WHERE id=$1
 	`
 
-	err := storage.DB.QueryRow(query, id).Scan(
+	err := storage.DB().QueryRow(query, id).Scan(
 		&u.ID,
 		&u.Username,
 		&u.FullName,
@@ -68,8 +68,8 @@ func GetUserByID(id int64) (*User, error) {
 
 // -------------------- READ ALL --------------------
 
-func GetAllUsers() ([]User, error) {
-	rows, err := storage.DB.Query(`
+func GetAllUsers(storage *postgres.Storage) ([]User, error) {
+	rows, err := storage.DB().Query(`
 		SELECT id, username, full_name, role_id, email, created_at
 		FROM users
 	`)
@@ -100,7 +100,7 @@ func GetAllUsers() ([]User, error) {
 
 // -------------------- UPDATE --------------------
 
-func UpdateUser(u *User) error {
+func UpdateUser(storage *postgres.Storage, u *User) error {
 	query := `
 		UPDATE users
 		SET username=$1,
@@ -109,7 +109,7 @@ func UpdateUser(u *User) error {
 		    email=$4
 		WHERE id=$5
 	`
-	res, err := storage.DB.Exec(
+	res, err := storage.DB().Exec(
 		query,
 		u.Username,
 		u.FullName,
@@ -131,8 +131,8 @@ func UpdateUser(u *User) error {
 
 // -------------------- DELETE --------------------
 
-func DeleteUser(id int64) error {
-	res, err := storage.DB.Exec("DELETE FROM users WHERE id=$1", id)
+func DeleteUser(storage *postgres.Storage, id int64) error {
+	res, err := storage.DB().Exec("DELETE FROM users WHERE id=$1", id)
 	if err != nil {
 		return err
 	}

@@ -84,26 +84,27 @@ func main() {
 		os.Exit(1)
 	}
 
-	_ = storage
-
 	r := chi.NewRouter()
 
 	r.Post("/api/v1/auth/login", loginHandler)
 	r.Post("/api/v1/auth/logout", logoutHandler)
 
+	studentHandler := students.NewHandler(storage)
 	r.Route("/api/v1/students", func(r chi.Router) {
 		r.Use(jwtMiddleware)
-		students.RegisterRoutes(r) // регистрируем CRUD-эндпойнты
+		studentHandler.RegisterRoutes(r)
 	})
 
+	userHandler := users.NewHandler(storage)
 	r.Route("/api/v1/users", func(r chi.Router) {
 		r.Use(jwtMiddleware)
-		users.RegisterRoutes(r)
+		userHandler.RegisterRoutes(r)
 	})
 
+	facultieHandler := faculties.NewHandler(storage)
 	r.Route("/api/v1/faculties", func(r chi.Router) {
 		r.Use(jwtMiddleware)
-		faculties.RegisterRoutes(r)
+		facultieHandler.RegisterRoutes(r)
 	})
 
 	log.Println("Server started on :8080!")

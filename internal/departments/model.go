@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"student-api/internal/storage"
+	"student-api/internal/storage/postgres"
 )
 
 type Faculty struct {
@@ -16,19 +16,19 @@ type Faculty struct {
 
 // -------------------- CREATE --------------------
 
-func CreateFaculty(f *Faculty) error {
+func CreateFaculty(storage *postgres.Storage, f *Faculty) error {
 	query := `
 		INSERT INTO faculties (name)
 		VALUES ($1)
 		RETURNING id
 	`
 
-	return storage.DB.QueryRow(query, f.Name).Scan(&f.ID)
+	return storage.DB().QueryRow(query, f.Name).Scan(&f.ID)
 }
 
 // -------------------- READ ONE --------------------
 
-func GetFacultyByID(id int64) (*Faculty, error) {
+func GetFacultyByID(storage *postgres.Storage, id int64) (*Faculty, error) {
 	var f Faculty
 
 	query := `
@@ -37,7 +37,7 @@ func GetFacultyByID(id int64) (*Faculty, error) {
 		WHERE id=$1
 	`
 
-	err := storage.DB.QueryRow(query, id).Scan(
+	err := storage.DB().QueryRow(query, id).Scan(
 		&f.ID,
 		&f.Name,
 	)
@@ -54,8 +54,8 @@ func GetFacultyByID(id int64) (*Faculty, error) {
 
 // -------------------- READ ALL --------------------
 
-func GetAllFaculties() ([]Faculty, error) {
-	rows, err := storage.DB.Query(`
+func GetAllFaculties(storage *postgres.Storage) ([]Faculty, error) {
+	rows, err := storage.DB().Query(`
 		SELECT id, name
 		FROM faculties
 		ORDER BY id
@@ -80,14 +80,14 @@ func GetAllFaculties() ([]Faculty, error) {
 
 // -------------------- UPDATE --------------------
 
-func UpdateFaculty(f *Faculty) error {
+func UpdateFaculty(storage *postgres.Storage, f *Faculty) error {
 	query := `
 		UPDATE faculties
 		SET name=$1
 		WHERE id=$2
 	`
 
-	res, err := storage.DB.Exec(query, f.Name, f.ID)
+	res, err := storage.DB().Exec(query, f.Name, f.ID)
 	if err != nil {
 		return err
 	}
@@ -102,8 +102,8 @@ func UpdateFaculty(f *Faculty) error {
 
 // -------------------- DELETE --------------------
 
-func DeleteFaculty(id int64) error {
-	res, err := storage.DB.Exec("DELETE FROM faculties WHERE id=$1", id)
+func DeleteFaculty(storage *postgres.Storage, id int64) error {
+	res, err := storage.DB().Exec("DELETE FROM faculties WHERE id=$1", id)
 	if err != nil {
 		return err
 	}
