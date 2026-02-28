@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 	"student-api/internal/config"
+	faculties "student-api/internal/departments"
 	"student-api/internal/storage/postgres"
 	"student-api/internal/users"
 	"time"
@@ -98,6 +99,11 @@ func main() {
 	r.Route("/api/v1/users", func(r chi.Router) {
 		r.Use(jwtMiddleware)
 		users.RegisterRoutes(r)
+	})
+
+	r.Route("/api/v1/faculties", func(r chi.Router) {
+		r.Use(jwtMiddleware)
+		faculties.RegisterRoutes(r)
 	})
 
 	log.Println("Server started on :8080!")
