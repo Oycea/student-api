@@ -4,7 +4,10 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
 	"strings"
+	"student-api/internal/config"
+	"student-api/internal/storage/postgres"
 	"time"
 
 	"student-api/internal/storage"
@@ -70,12 +73,22 @@ type LoginRequest struct {
 }
 
 func main() {
+	// Загрузка конфига
+	cfg := config.MustLoad()
+
+	// Подключение БД
+	storage, err := postgres.New(cfg.Storage)
+	if err != nil {
+		log.Fatal("Failed to init storage")
+		os.Exit(1)
+	}
+
+	_ = storage
+
 	r := chi.NewRouter()
 
 	r.Post("/api/v1/auth/login", loginHandler)
 	r.Post("/api/v1/auth/logout", logoutHandler)
-
-	storage.Init()
 
 	r.Route("/api/v1/students", func(r chi.Router) {
 		r.Use(jwtMiddleware)
