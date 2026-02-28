@@ -10,6 +10,9 @@ import (
 	"student-api/internal/storage/postgres"
 	"time"
 
+	"student-api/internal/storage"
+	"student-api/internal/students"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -86,6 +89,11 @@ func main() {
 
 	r.Post("/api/v1/auth/login", loginHandler)
 	r.Post("/api/v1/auth/logout", logoutHandler)
+
+	r.Route("/api/v1/students", func(r chi.Router) {
+		r.Use(jwtMiddleware)
+		students.RegisterRoutes(r) // регистрируем CRUD-эндпойнты
+	})
 
 	log.Println("Server started on :8080!")
 	log.Fatal(http.ListenAndServe(":8080", r))
